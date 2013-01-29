@@ -327,7 +327,7 @@ function updateTree(task) {
   //try to enlarge parent
   var p = task.getParent();
   if (!p) {
-    return todoOK;
+    return true;
   }
 
   var newStart = p.start;
