@@ -540,108 +540,134 @@ Task.prototype.isLocallyBlockedByDependencies=function(){
 //<%---------- TASK STRUCTURE ---------------------- --%>
 Task.prototype.getRow = function() {
   ret = -1;
-  if (this.master)
+
+  if (this.master) {
     ret = this.master.tasks.indexOf(this);
+  }
+
   return ret;
 };
 
 
 Task.prototype.getParents = function() {
-  var ret;
-  if (this.master) {
-    var topLevel = this.level;
-    var pos = this.getRow();
-    ret = [];
-    for (var i = pos; i >= 0; i--) {
-      var par = this.master.tasks[i];
-      if (topLevel > par.level) {
-        topLevel = par.level;
-        ret.push(par);
-      }
+  var ret, par, topLevel, pos;
+  if (!this.master) {
+    return ret;
+  }
+
+  topLevel = this.level;
+  pos = this.getRow();
+  ret = [];
+  for (var i = pos; i >= 0; i--) {
+    par = this.master.tasks[i];
+    if (topLevel > par.level) {
+      topLevel = par.level;
+      ret.push(par);
     }
   }
+
   return ret;
 };
 
 
 Task.prototype.getParent = function() {
-  var ret;
-  if (this.master) {
-    for (var i = this.getRow(); i >= 0; i--) {
-      var par = this.master.tasks[i];
-      if (this.level > par.level) {
-        ret = par;
-        break;
-      }
+  var ret, par;
+  if (!this.master) {
+    return ret;  
+  }
+
+  for (var i = this.getRow(); i >= 0; i--) {
+    par = this.master.tasks[i];
+    if (this.level > par.level) {
+      ret = par;
+      break;
     }
   }
+
   return ret;
 };
 
 
 Task.prototype.isParent = function() {
-  var ret = false;
-  if (this.master) {
-    var pos = this.getRow();
-    if (pos < this.master.tasks.length - 1)
-      ret = this.master.tasks[pos + 1].level > this.level;
+  var ret = false, pos;
+  if (!this.master) {
+    return ret;
   }
+
+  pos = this.getRow();
+  if (pos < this.master.tasks.length - 1) {
+    ret = this.master.tasks[pos + 1].level > this.level;
+  }
+
   return ret;
 };
 
 
 Task.prototype.getChildren = function() {
-  var ret = [];
-  if (this.master) {
-    var pos = this.getRow();
-    for (var i = pos + 1; i < this.master.tasks.length; i++) {
-      var ch = this.master.tasks[i];
-      if (ch.level == this.level + 1)
-        ret.push(ch);
-      else if (ch.level <= this.level) // exit loop if parent or brother
-        break;
+  var ret = [], pos, ch;
+  if (!this.master) {
+    return ret;
+  }
+
+  pos = this.getRow();
+  for (var i = pos + 1; i < this.master.tasks.length; i++) {
+    ch = this.master.tasks[i];
+    if (ch.level == this.level + 1) {
+      ret.push(ch);
+    } else if (ch.level <= this.level) {
+      break; // exit loop if parent or brother
     }
   }
+
   return ret;
 };
 
 
 Task.prototype.getDescendant = function() {
-  var ret = [];
-  if (this.master) {
-    var pos = this.getRow();
-    for (var i = pos + 1; i < this.master.tasks.length; i++) {
-      var ch = this.master.tasks[i];
-      if (ch.level > this.level)
-        ret.push(ch);
-      else
-        break;
+  var ret = [], pos, ch;
+  if (!this.master) {
+    return ret;
+  }
+
+  pos = this.getRow();
+  for (var i = pos + 1; i < this.master.tasks.length; i++) {
+    ch = this.master.tasks[i];
+    if (ch.level > this.level) {
+      ret.push(ch);
+    } else {
+      break;
     }
   }
+  
   return ret;
 };
 
 
 Task.prototype.getSuperiors = function() {
-  var ret = [];
-  var task = this;
-  if (this.master) {
-    ret = this.master.links.filter(function(link) {
-      return link.to == task;
-    });
+  var ret = [], task = this;
+  if (!this.master) {
+    return ret;
   }
+
+  ret = this.master.links.filter(function(link) {
+    return link.to == task;
+  });
+
   return ret;
 };
 
 
 Task.prototype.getInferiors = function() {
-  var ret = [];
-  var task = this;
-  if (this.master) {
-    ret = this.master.links.filter(function(link) {
-      return link.from == task;
-    });
+  var ret = [], task = this;
+
+  if (!this.master) {
+    return ret;
   }
+
+  ret = this.master.links.filter(function(link) {
+    return link.from == task;
+  });
+
   return ret;
 };
 
@@ -655,13 +681,15 @@ Task.prototype.deleteTask = function() {
   var chd = this.getChildren();
   for (var i=0;i<chd.length;i++) {
     //add removed child in list
-    if(!chd[i].isNew())
+    if (!chd[i].isNew()) {
       this.master.deletedTaskIds.push(chd[i].id);
+    }
     chd[i].deleteTask();
   }
 
-  if(!this.isNew())
+  if (!this.isNew()) {
     this.master.deletedTaskIds.push(this.id);
+  }
 
 
   //remove from in-memory collection
