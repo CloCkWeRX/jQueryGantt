@@ -185,8 +185,10 @@ Task.prototype.setPeriod = function (start, end) {
         this.start = Math.min(bs, this.start);
       }
 
-       this.duration = recomputeDuration(this.start, this.end);
-    } else {
+      this.duration = recomputeDuration(this.start, this.end);
+    }
+
+    if (!restricting) {
 
       //check global boundaries
       if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
