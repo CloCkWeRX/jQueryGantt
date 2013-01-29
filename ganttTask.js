@@ -248,7 +248,7 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
     //notify error
     this.master.setErrorOnTransaction(GanttMaster.messages["START_IS_MILESTONE"], this);
     return false;
-  } else if (this.hasExternalDep){
+  } else if (this.hasExternalDep) {
     //notify error
     this.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"], this);
     return false;
@@ -281,50 +281,48 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
   }
 
   //profiler.stop();
-
-  var todoOk = true;
-
   if (somethingChanged) {
 
     //check global boundaries
     if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
       this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
-      todoOk = false;
+      return false;
     }
 
-    if (todoOk) {
-      var panDelta = originalPeriod.start - this.start;
-      //console.debug("panDelta",panDelta);
-      //loops children to shift them
-      var children = this.getChildren();
-      for (var i=0;i<children.length;i++) {
-        ch = children[i];
-        todoOk = ch.moveTo(ch.start - panDelta, false);
-        if (!todoOk)
-          break;
+    
+    var panDelta = originalPeriod.start - this.start;
+    //console.debug("panDelta",panDelta);
+    //loops children to shift them
+    var children = this.getChildren();
+    for (var i=0;i<children.length;i++) {
+      ch = children[i];
+      if (!ch.moveTo(ch.start - panDelta, false)) {
+        return false;
       }
     }
+  
 
     //console.debug("set period: somethingChanged",this);
-    if (todoOk && !updateTree(this)) {
-      todoOk = false;
+    if (!updateTree(this)) {
+      return false;
     }
 
-    if (todoOk) {
-      //and now propagate to inferiors
-      var infs = this.getInferiors();
-      if (infs && infs.length > 0) {
-        for (var i=0;i<infs.length;i++) {
-          var link = infs[i];
-          todoOk = link.to.moveTo(end, false); //this is not the right date but moveTo checks start
-          if (!todoOk)
-            break;
+
+    //and now propagate to inferiors
+    var infs = this.getInferiors();
+    if (infs && infs.length > 0) {
+      for (var i=0;i<infs.length;i++) {
+        var link = infs[i];
+
+        //this is not the right date but moveTo checks start
+        if (!link.to.moveTo(end, false)) {
+          return false;
         }
       }
     }
   }
 
-  return todoOk;
+  return true;
 };
 
 
