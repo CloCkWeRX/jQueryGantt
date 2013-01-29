@@ -237,7 +237,7 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
     start:this.start,
     end:this.end
   };
-  var somethingChanged = false;
+
   var wantedStartMillis = start;
 
   //set a legal start
@@ -277,11 +277,7 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
     }
     this.start = start;
     this.end = end;
-    somethingChanged = true;
-  }
-
-  //profiler.stop();
-  if (somethingChanged) {
+    //profiler.stop();
 
     //check global boundaries
     if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
@@ -320,6 +316,7 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
         }
       }
     }
+
   }
 
   return true;
