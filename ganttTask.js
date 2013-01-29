@@ -381,7 +381,6 @@ Task.prototype.changeStatus = function (newStatus) {
 
   /** @todo This should be refactored into a few classes, that provide can?(change_to_status) and apply!(status) */
   function propagateStatus(task, newStatus, manuallyChanged, propagateFromParent, propagateFromChildren) {
-    var todoOk = true;
     var oldStatus = task.status;
 
     if (newStatus == oldStatus) {
@@ -389,6 +388,7 @@ Task.prototype.changeStatus = function (newStatus) {
     }
     //console.debug("propagateStatus: "+task.name + " from " + task.status + " to " + newStatus + " " + (manuallyChanged?" a manella":"")+(propagateFromParent?" da parent":"")+(propagateFromChildren?" da children":""));
 
+    var todoOk = true;
     task.status = newStatus;
 
     //xxxx -> STATUS_DONE            may activate dependent tasks, both suspended and undefined. Will set to done all descendants.
@@ -740,13 +740,13 @@ Task.prototype.isNew=function (){
 //<%------------------------------------------  INDENT/OUTDENT --------------------------------%>
 Task.prototype.indent = function () {
   //console.debug("indent", this);
-  var ret = false;
   //a row above must exist
   var row = this.getRow();
   if (row <= 0) {
     return false;
   }
 
+  var ret = false;
   var taskAbove = this.master.tasks[row - 1];
   var newLev = this.level + 1;
   if (newLev <= taskAbove.level + 1) {
@@ -888,11 +888,13 @@ Task.prototype.moveUp = function () {
 Task.prototype.moveDown = function () {
   //console.debug("moveDown", this);
 
-  //a row above must exist
+  //a row below must exist, and cannot move root task
   var row = this.getRow();
-  if (row >= this.master.tasks.length - 1) {
+  if (row >= this.master.tasks.length - 1 || row==0) {
     return false;
   }
+
+  var ret = false;
 
   //find nearest brother
   var newRow;

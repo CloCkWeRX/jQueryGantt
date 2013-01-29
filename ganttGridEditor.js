@@ -143,45 +143,62 @@ GridEditor.prototype.bindRowEvents = function (task, taskRow) {
   var self = this;
   //console.debug("bindRowEvents",this,this.master,this.master.canWrite);
   if (this.master.canWrite) {
-    //bind dateField on dates
-    taskRow.find(".date").each(function() {
-      var el = $(this);
-      el.click(function() {
-        var inp = $(this);
-        inp.dateField({
-          inputField:el
-        });
-      }).blur(function(date) {
-        var inp = $(this);
-        if (inp.isValueChanged()) {
-          if (!Date.isValid(inp.val())) {
-            alert(GanttMaster.messages["INVALID_DATE_FORMAT"]);
-            inp.val(inp.getOldValue());
+    self.bindRowInputEvents(task,taskRow);
+
+  } else { //cannot write: disable input
+    taskRow.find("input").attr("readonly", true);
+  }
+
+  taskRow.find(".edit").click(function() {self.openFullEditor(task,taskRow)});
+
+};
+
+
+GridEditor.prototype.bindRowInputEvents = function (task, taskRow) {
+  var self = this;
+
+  //bind dateField on dates
+  taskRow.find(".date").each(function () {
+    var el = $(this);
+
+    el.click(function () {
+      var inp = $(this);
+      inp.dateField({
+        inputField:el
+      });
+    });
+
+    el.blur(function (date) {
+      var inp = $(this);
+      if (inp.isValueChanged()) {
+        if (!Date.isValid(inp.val())) {
+          alert(GanttMaster.messages["INVALID_DATE_FORMAT"]);
+          inp.val(inp.getOldValue());
+
+        } else {
+          var date = Date.parseString(inp.val());
+          var row = inp.closest("tr");
+          var taskId = row.attr("taskId");
+          var task = self.master.getTask(taskId);
+          var lstart = task.start;
+          var lend = task.end;
+
+          if (inp.attr("name") == "start") {
+            lstart = date.getTime();
+            if (lstart >= lend)
+            //   lstart = lend - (3600000 * 24);
+              lend = lstart + (3600000 * 24) * task.duration;
+
+            //update task from editor
+            self.master.beginTransaction();
+            self.master.moveTask(task, lstart);
+            self.master.endTransaction();
 
           } else {
-            var date = Date.parseString(inp.val());
-            var row = inp.closest("tr");
-            var taskId = row.attr("taskId");
-            var task = self.master.getTask(taskId);
-            var lstart = task.start;
-            var lend = task.end;
-
-            if (inp.attr("name") == "start") {
-              lstart = date.getTime();
-              if (lstart >= lend)
-              //   lstart = lend - (3600000 * 24);
-                lend = lstart + (3600000 * 24) * task.duration;
-
-              //update task from editor
-              self.master.beginTransaction();
-              self.master.moveTask(task, lstart);
-              self.master.endTransaction();
-
-            } else {
-              lend = date.getTime() + (3600000 * 24);
-              if (lstart >= lend)
-              //lend = lstart + (3600000 * 24);
-                lstart = lend - (3600000 * 24) * (task.duration);
+            lend = date.getTime() + (3600000 * 24);
+            if (lstart >= lend)
+            //lend = lstart + (3600000 * 24);
+              lstart = lend - (3600000 * 24) * (task.duration);
 
             //update task from editor
             self.master.beginTransaction();
@@ -194,14 +211,14 @@ GridEditor.prototype.bindRowEvents = function (task, taskRow) {
         }
       }
     });
-    });
+  });
 
 
   //binding on blur for task update (date exluded as click on calendar blur and then focus, so will always return false, its called refreshing the task row)
-  taskRow.find("input:not(.date)").focus(function() {
+  taskRow.find("input:not(.date)").focus(function () {
     $(this).updateOldValue();
 
-  }).blur(function() {
+  }).blur(function () {
     var el = $(this);
     if (el.isValueChanged()) {
       var row = el.closest("tr");
@@ -233,7 +250,7 @@ GridEditor.prototype.bindRowEvents = function (task, taskRow) {
 
       } else if (field == "duration") {
         var dur = task.duration;
-        dur  = parseInt(el.val()) || 1;
+        dur = parseInt(el.val()) || 1;
         el.val(dur);
         var newEnd = computeEndByDuration(task.start, dur);
         self.master.changeTaskDates(task, task.start, newEnd);
@@ -247,7 +264,7 @@ GridEditor.prototype.bindRowEvents = function (task, taskRow) {
 
 
   //change status
-  taskRow.find(".taskStatus").click(function() {
+  taskRow.find(".taskStatus").click(function () {
     var el = $(this);
     var tr = el.closest("[taskId]");
     var taskId = tr.attr("taskId");
@@ -256,7 +273,7 @@ GridEditor.prototype.bindRowEvents = function (task, taskRow) {
     var changer = $.JST.createFromTemplate({}, "CHANGE_STATUS");
     changer.css("top", tr.position().top + self.element.parent().scrollTop());
     changer.find("[status=" + task.status + "]").addClass("selected");
-    changer.find(".taskStatus").click(function() {
+    changer.find(".taskStatus").click(function () {
       self.master.beginTransaction();
       task.changeStatus($(this).attr("status"));
       self.master.endTransaction();
@@ -265,7 +282,7 @@ GridEditor.prototype.bindRowEvents = function (task, taskRow) {
       el.show();
 
     });
-    el.hide().oneTime(3000, "hideChanger", function() {
+    el.hide().oneTime(3000, "hideChanger", function () {
       changer.remove();
       $(this).show();
     });
@@ -291,7 +308,7 @@ GridEditor.prototype.bindRowEvents = function (task, taskRow) {
    });*/
 
   //bind row selection
-  taskRow.click(function() {
+  taskRow.click(function () {
     var row = $(this);
     //var isSel = row.hasClass("rowSelected");
     row.closest("table").find(".rowSelected").removeClass("rowSelected");
@@ -311,16 +328,16 @@ GridEditor.prototype.bindRowEvents = function (task, taskRow) {
     }
   });
 
-  } else { //cannot write: disable input
-  taskRow.find("input").attr("readonly", true);
-}
+};
 
 
-//task editor in popup
-taskRow.find(".edit").click(function() {
-  var taskRow = $(this).closest("[taskId]");
+
+GridEditor.prototype.openFullEditor = function (task, taskRow) {
+
+  var self=this;
+
+  //task editor in popup
   var taskId = taskRow.attr("taskId");
-  var task = self.master.getTask(taskId);
   //console.debug(task);
 
   //make task editor
@@ -349,7 +366,7 @@ taskRow.find(".edit").click(function() {
   // loop on already assigned resources
   for (var i = 0; i < task.assigs.length; i++) {
     var assig = task.assigs[i];
-    var assigRow = $.JST.createFromTemplate({task:task,assig:assig}, "ASSIGNMENT_ROW");
+    var assigRow = $.JST.createFromTemplate({task:task, assig:assig}, "ASSIGNMENT_ROW");
     assigsTable.append(assigRow);
   }
 
@@ -359,10 +376,10 @@ taskRow.find(".edit").click(function() {
   } else {
 
     //bind dateField on dates
-    taskEditor.find("#start").click(function() {
+    taskEditor.find("#start").click(function () {
       $(this).dateField({
         inputField:$(this),
-        callback: function(date) {
+        callback:  function (date) {
           var dur = parseInt(taskEditor.find("#duration").val());
           date.clearTime();
           taskEditor.find("#end").val(new Date(computeEndByDuration(date.getTime(), dur)).format());
@@ -371,10 +388,10 @@ taskRow.find(".edit").click(function() {
     });
 
     //bind dateField on dates
-    taskEditor.find("#end").click(function() {
+    taskEditor.find("#end").click(function () {
       $(this).dateField({
         inputField:$(this),
-        callback: function(end) {
+        callback:  function (end) {
           var start = Date.parseString(taskEditor.find("#start").val());
           end.setHours(23, 59, 59, 999);
 
@@ -390,7 +407,7 @@ taskRow.find(".edit").click(function() {
     });
 
     //bind blur on duration
-    taskEditor.find("#duration").change(function() {
+    taskEditor.find("#duration").change(function () {
       var start = Date.parseString(taskEditor.find("#start").val());
       var el = $(this);
       var dur = parseInt(el.val());
@@ -400,23 +417,23 @@ taskRow.find(".edit").click(function() {
     });
 
     //bind add assignment
-    taskEditor.find("#addAssig").click(function() {
+    taskEditor.find("#addAssig").click(function () {
       var assigsTable = taskEditor.find("#assigsTable");
-      var assigRow = $.JST.createFromTemplate({task:task,assig:{id:"tmp_" + new Date().getTime()}}, "ASSIGNMENT_ROW");
+      var assigRow = $.JST.createFromTemplate({task:task, assig:{id:"tmp_" + new Date().getTime()}}, "ASSIGNMENT_ROW");
       assigsTable.append(assigRow);
     });
 
-    taskEditor.find("#status").click(function() {
+    taskEditor.find("#status").click(function () {
       var tskStatusChooser = $(this);
       var changer = $.JST.createFromTemplate({}, "CHANGE_STATUS");
       changer.css("top", tskStatusChooser.position().top);
       changer.find("[status=" + task.status + "]").addClass("selected");
-      changer.find(".taskStatus").click(function() {
+      changer.find(".taskStatus").click(function () {
         tskStatusChooser.attr("status", $(this).attr("status"));
         changer.remove();
         tskStatusChooser.show();
       });
-      tskStatusChooser.hide().oneTime(3000, "hideChanger", function() {
+      tskStatusChooser.hide().oneTime(3000, "hideChanger", function () {
         changer.remove();
         $(this).show();
       });
@@ -424,7 +441,7 @@ taskRow.find(".edit").click(function() {
     });
 
     //save task
-    taskEditor.find("#saveButton").click(function() {
+    taskEditor.find("#saveButton").click(function () {
       var task = self.master.getTask(taskId); // get task again because in case of rollback old task is lost
 
       self.master.beginTransaction();
@@ -437,7 +454,7 @@ taskRow.find(".edit").click(function() {
       task.endIsMilestone = taskEditor.find("#endIsMilestone").is(":checked");
 
       //set assignments
-      taskEditor.find("tr[assigId]").each(function() {
+      taskEditor.find("tr[assigId]").each(function () {
         var trAss = $(this);
         var assId = trAss.attr("assigId");
         var resId = trAss.find("[name=resourceId]").val();
@@ -475,7 +492,7 @@ taskRow.find(".edit").click(function() {
       });
 
       //remove untouched assigs
-      task.assigs = task.assigs.filter(function(ass) {
+      task.assigs = task.assigs.filter(function (ass) {
         var ret = ass.touched;
         delete ass.touched;
         return ret;
@@ -491,13 +508,9 @@ taskRow.find(".edit").click(function() {
         $("#__blackpopup__").trigger("close");
       }
 
-
     });
   }
 
   var ndo = createBlackPage(800, 500).append(taskEditor);
-});
 
 };
-
-
