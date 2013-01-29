@@ -110,7 +110,6 @@ GanttMaster.prototype.init = function(place) {
 
 
   }).bind("addAboveCurrentTask.gantt", function() {
-    self.beginTransaction();
     var ch;
     var row = 0;
     if (self.currentTask) {
@@ -123,6 +122,7 @@ GanttMaster.prototype.init = function(place) {
     } else {
       ch = new Task("tmp_" + new Date().getTime(), "", "", 0, new Date().getTime(), 1);
     }
+    self.beginTransaction();
     var task = self.addTask(ch, row);
     if (task) {
       task.rowElement.click();
@@ -188,23 +188,22 @@ GanttMaster.prototype.init = function(place) {
 };
 
 GanttMaster.messages = {
-   "CHANGE_OUT_OF_SCOPE":"NO_RIGHTS_FOR_UPDATE_PARENTS_OUT_OF_EDITOR_SCOPE",
-   "START_IS_MILESTONE":"START_IS_MILESTONE",
-   "END_IS_MILESTONE":"END_IS_MILESTONE",
-   "TASK_HAS_CONSTRAINTS":"TASK_HAS_CONSTRAINTS",
-   "GANTT_ERROR_DEPENDS_ON_OPEN_TASK":"GANTT_ERROR_DEPENDS_ON_OPEN_TASK",
-   "GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK":"GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK",
-   "TASK_HAS_EXTERNAL_DEPS":"TASK_HAS_EXTERNAL_DEPS",
-   "GANNT_ERROR_LOADING_DATA_TASK_REMOVED":"GANNT_ERROR_LOADING_DATA_TASK_REMOVED",
-   "CIRCULAR_REFERENCE":"CIRCULAR_REFERENCE",
-   "ERROR_SETTING_DATES":"ERROR_SETTING_DATES",
-   "CANNOT_DEPENDS_ON_ANCESTORS":"CANNOT_DEPENDS_ON_ANCESTORS",
-   "CANNOT_DEPENDS_ON_DESCENDANTS":"CANNOT_DEPENDS_ON_DESCENDANTS",
-   "INVALID_DATE_FORMAT":"INVALID_DATE_FORMAT",
-
-   "GANT_QUARTER_SHORT":"GANT_QUARTER_SHORT",
-   "GANT_SEMESTER_SHORT":"GANT_SEMESTER_SHORT"
- };  
+  "CHANGE_OUT_OF_SCOPE":                  "NO_RIGHTS_FOR_UPDATE_PARENTS_OUT_OF_EDITOR_SCOPE",
+  "START_IS_MILESTONE":                   "START_IS_MILESTONE",
+  "END_IS_MILESTONE":                     "END_IS_MILESTONE",
+  "TASK_HAS_CONSTRAINTS":                 "TASK_HAS_CONSTRAINTS",
+  "GANTT_ERROR_DEPENDS_ON_OPEN_TASK":     "GANTT_ERROR_DEPENDS_ON_OPEN_TASK",
+  "GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK":"GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK",
+  "TASK_HAS_EXTERNAL_DEPS":               "TASK_HAS_EXTERNAL_DEPS",
+  "GANNT_ERROR_LOADING_DATA_TASK_REMOVED":"GANNT_ERROR_LOADING_DATA_TASK_REMOVED",
+  "CIRCULAR_REFERENCE":                   "CIRCULAR_REFERENCE",
+  "ERROR_SETTING_DATES":                  "ERROR_SETTING_DATES",
+  "CANNOT_DEPENDS_ON_ANCESTORS":          "CANNOT_DEPENDS_ON_ANCESTORS",
+  "CANNOT_DEPENDS_ON_DESCENDANTS":        "CANNOT_DEPENDS_ON_DESCENDANTS",
+  "INVALID_DATE_FORMAT":                  "INVALID_DATE_FORMAT",
+  "GANT_QUARTER_SHORT": "GANT_QUARTER_SHORT",
+  "GANT_SEMESTER_SHORT":"GANT_SEMESTER_SHORT"
+};
 
 
 GanttMaster.prototype.createTask = function (id, name, code, level, start, duration) {
@@ -372,8 +371,8 @@ GanttMaster.prototype.loadTasks = function(tasks, selectedRow) {
 
   // re-select old row if tasks is not empty
   if (this.tasks && this.tasks.length>0){
-    selectedRow = selectedRow ? selectedRow : 0;
-    this.tasks[selectedRow].rowElement.click();
+  selectedRow = selectedRow ? selectedRow : 0;
+  this.tasks[selectedRow].rowElement.click();
   }
 
 };
@@ -455,7 +454,6 @@ GanttMaster.prototype.showTaskEditor = function(taskId) {
   var task = this.getTask(taskId);
   task.rowElement.find(".edit").click();
 };
-
 
 GanttMaster.prototype.saveProject = function() {
   return this.saveGantt(false);

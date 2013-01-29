@@ -888,7 +888,7 @@ Task.prototype.moveUp = function () {
 Task.prototype.moveDown = function () {
   //console.debug("moveDown", this);
 
-  //a row above must exist
+  //a row below must exist, and cannot move root task
   var row = this.getRow();
   if (row >= this.master.tasks.length - 1) {
     return false;
