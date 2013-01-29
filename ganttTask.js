@@ -237,7 +237,7 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
     start:this.start,
     end:this.end
   };
-
+  var somethingChanged = false;
   var wantedStartMillis = start;
 
   //set a legal start
@@ -269,60 +269,60 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
 
   var end = computeEndByDuration(start, this.duration);
 
-  if (!(this.start != start || this.start != wantedStartMillis)) {
-    return true;
+  if (this.start != start || this.start != wantedStartMillis) {
+    //in case of end is milestone it never changes, but recompute duration
+    if (!ignoreMilestones && this.endIsMilestone) {
+      end = this.end;
+      this.duration = recomputeDuration(start, end);
+    }
+    this.start = start;
+    this.end = end;
+    somethingChanged = true;
   }
-  
-  //in case of end is milestone it never changes, but recompute duration
-  if (!ignoreMilestones && this.endIsMilestone) {
-    end = this.end;
-    this.duration = recomputeDuration(start, end);
-  }
-  this.start = start;
-  this.end = end;
-
 
   //profiler.stop();
-  //check global boundaries
-  if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
-    this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
-    return false;
-  }
+  if (somethingChanged) {
 
-  
-  var panDelta = originalPeriod.start - this.start;
-  //console.debug("panDelta",panDelta);
-  //loops children to shift them
-  var children = this.getChildren();
-  for (var i=0;i<children.length;i++) {
-    ch = children[i];
-    if (!ch.moveTo(ch.start - panDelta, false)) {
+    //check global boundaries
+    if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
+      this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
       return false;
     }
-  }
 
-
-  //console.debug("set period: somethingChanged",this);
-  if (!updateTree(this)) {
-    return false;
-  }
-
-
-  //and now propagate to inferiors
-  var infs = this.getInferiors();
-  if (infs && infs.length > 0) {
-    for (var i=0;i<infs.length;i++) {
-      var link = infs[i];
-
-      //this is not the right date but moveTo checks start
-      if (!link.to.moveTo(end, false)) {
+    
+    var panDelta = originalPeriod.start - this.start;
+    //console.debug("panDelta",panDelta);
+    //loops children to shift them
+    var children = this.getChildren();
+    for (var i=0;i<children.length;i++) {
+      ch = children[i];
+      if (!ch.moveTo(ch.start - panDelta, false)) {
         return false;
+      }
+    }
+  
+
+    //console.debug("set period: somethingChanged",this);
+    if (!updateTree(this)) {
+      return false;
+    }
+
+
+    //and now propagate to inferiors
+    var infs = this.getInferiors();
+    if (infs && infs.length > 0) {
+      for (var i=0;i<infs.length;i++) {
+        var link = infs[i];
+
+        //this is not the right date but moveTo checks start
+        if (!link.to.moveTo(end, false)) {
+          return false;
+        }
       }
     }
   }
 
-
-
+  return true;
 };
 
 
@@ -467,11 +467,9 @@ Task.prototype.changeStatus = function (newStatus) {
       var chds = task.getChildren();
       if (oldStatus == "STATUS_UNDEFINED" || oldStatus == "STATUS_SUSPENDED") {
         //set children as active
-        for (var i=0;i<chds.length;i++) {
-          if (chds[i].status != "STATUS_DONE") {
+        for (var i=0;i<chds.length;i++)
+          if (chds[i].status != "STATUS_DONE" )
             propagateStatus(chds[i], "STATUS_ACTIVE", false,true,false);
-          }
-        }
       }
 
       //set inferiors as suspended
