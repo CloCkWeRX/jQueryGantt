@@ -59,8 +59,9 @@ Task.prototype.getAssigsString = function() {
   for (var i=0;i<this.assigs.length;i++) {
     var ass = this.assigs[i];
     var res = this.master.getResource(ass.resourceId);
-    if (res)
+    if (res) {
       ret = ret + (ret == "" ? "" : ", ") + res.name;
+    }
   }
   return ret;
 };
@@ -77,20 +78,28 @@ Task.prototype.setPeriod = function(start, end) {
   //console.debug("setPeriod ",this.name,new Date(start),new Date(end));
   //var profilerSetPer = new Profiler("gt_setPeriodJS");
 
-  if (start instanceof Date)
+  if (start instanceof Date) {
     start = start.getTime();
-  if (end instanceof Date)
+  }
+  if (end instanceof Date) {
     end = end.getTime();
+  }
 
-  var originalPeriod = {start:this.start,end:this.end,duration:this.duration};
+  var originalPeriod = {
+    start: this.start,
+    end:  this.end,
+    duration: this.duration
+  };
+
   var somethingChanged = false;
 
   //console.debug("setStart",date,date instanceof Date);
   var wantedStartMillis = start;
 
   //cannot start after end
-  if (start > end)
+  if (start > end) {
     start = end;
+  }
 
   //set a legal start
   start = computeStart(start);
@@ -211,10 +220,14 @@ Task.prototype.moveTo = function(start, ignoreMilestones) {
   //console.debug("moveTo ",this,start,ignoreMilestones);
   //var profiler = new Profiler("gt_task_moveTo");
 
-  if (start instanceof Date)
+  if (start instanceof Date) {
     start = start.getTime();
+  }
 
-  var originalPeriod = {start:this.start,end:this.end};
+  var originalPeriod = {
+    start:this.start,
+    end:this.end
+  };
   var somethingChanged = false;
   var wantedStartMillis = start;
 
@@ -301,6 +314,7 @@ Task.prototype.moveTo = function(start, ignoreMilestones) {
       }
     }
   }
+
   return todoOk;
 };
 
@@ -312,43 +326,46 @@ function updateTree(task) {
 
   //try to enlarge parent
   var p = task.getParent();
-  if (p) {
-    var newStart = p.start;
-    var newEnd = p.end;
+  if (!p) {
+    return todoOK;
+  }
 
-    if (p.start > task.start) {
-      if (p.startIsMilestone) {
-        task.master.setErrorOnTransaction(GanttMaster.messages["START_IS_MILESTONE"] + "\n" + p.name, task);
-        todoOk = false;
-      } else if (p.depends) {
-        task.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_CONSTRAINTS"] + "\n" + p.name, task);
+  var newStart = p.start;
+  var newEnd = p.end;
+
+  if (p.start > task.start) {
+    if (p.startIsMilestone) {
+      task.master.setErrorOnTransaction(GanttMaster.messages["START_IS_MILESTONE"] + "\n" + p.name, task);
+      todoOk = false;
+    } else if (p.depends) {
+      task.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_CONSTRAINTS"] + "\n" + p.name, task);
+      todoOk = false;
+    } else {
+      newStart = task.start;
+    }
+  }
+  if (p.end < task.end) {
+    if (!p.endIsMilestone) {
+      newEnd = task.end;
+    } else {
+      task.master.setErrorOnTransaction(GanttMaster.messages["END_IS_MILESTONE"] + "\n" + p.name, task);
+      todoOk = false;
+    }
+  }
+
+  if (todoOk) {
+    //propagate updates if needed
+    if (newStart != p.start || newEnd != p.end) {
+      //has external deps ?
+      if (p.hasExternalDep) {
+        task.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"] + "\n" + p.name, task);
         todoOk = false;
       } else {
-        newStart = task.start;
-      }
-    }
-    if (p.end < task.end) {
-      if (!p.endIsMilestone) {
-        newEnd = task.end;
-      } else {
-        task.master.setErrorOnTransaction(GanttMaster.messages["END_IS_MILESTONE"] + "\n" + p.name, task);
-        todoOk = false;
-      }
-    }
-
-    if (todoOk) {
-      //propagate updates if needed
-      if (newStart != p.start || newEnd != p.end) {
-        //has external deps ?
-        if (p.hasExternalDep) {
-          task.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"] + "\n" + p.name, task);
-          todoOk = false;
-        } else {
-          todoOk = p.setPeriod(newStart, newEnd);
-        }
+        todoOk = p.setPeriod(newStart, newEnd);
       }
     }
   }
+
   return todoOk;
 }
 
@@ -363,7 +380,7 @@ Task.prototype.changeStatus = function(newStatus) {
     var todoOk = true;
     var oldStatus = task.status;
 
-    if(newStatus == oldStatus){
+    if (newStatus == oldStatus) {
       return true;
     }
     //console.debug("propagateStatus: "+task.name + " from " + task.status + " to " + newStatus + " " + (manuallyChanged?" a manella":"")+(propagateFromParent?" da parent":"")+(propagateFromChildren?" da children":""));
@@ -513,8 +530,9 @@ Task.prototype.changeStatus = function(newStatus) {
 
   todoOk = propagateStatus(this, newStatus, true,false,false);
 
-  if (!todoOk)
+  if (!todoOk) {
     this.status = oldStatus;
+  }
 
   return todoOk;
 };
@@ -527,32 +545,30 @@ Task.prototype.synchronizeStatus=function(){
 
 Task.prototype.isLocallyBlockedByDependencies=function(){
   var sups = this.getSuperiors();
-  var blocked=false;
+
   for (var i=0;i<sups.length;i++) {
     if (sups[i].from.status != "STATUS_DONE") {
-      blocked=true;
-      break;
+      return true;
     }
   }
-  return blocked;
+
+  return false;
 };
 
 //<%---------- TASK STRUCTURE ---------------------- --%>
 Task.prototype.getRow = function() {
-  ret = -1;
-
-  if (this.master) {
-    ret = this.master.tasks.indexOf(this);
+  if (!this.master) {
+    return -1;
   }
-
-  return ret;
+  
+  return this.master.tasks.indexOf(this);
 };
 
 
 Task.prototype.getParents = function() {
   var ret, par, topLevel, pos;
   if (!this.master) {
-    return ret;
+    return;
   }
 
   topLevel = this.level;
@@ -573,7 +589,7 @@ Task.prototype.getParents = function() {
 Task.prototype.getParent = function() {
   var ret, par;
   if (!this.master) {
-    return ret;  
+    return;  
   }
 
   for (var i = this.getRow(); i >= 0; i--) {
@@ -796,104 +812,110 @@ Task.prototype.outdent = function() {
 //<%------------------------------------------  MOVE UP / MOVE DOWN --------------------------------%>
 Task.prototype.moveUp = function() {
   //console.debug("moveUp", this);
-  var ret = false;
+  var row, newRow;
 
   //a row above must exist
-  var row = this.getRow();
-  if (row > 0) {
+  row = this.getRow();
+  if (row <= 0) {
+    return false;
+  }
 
-    //find new row
-    var newRow;
-    for (newRow = row - 1; newRow >= 0; newRow--) {
-      if (this.master.tasks[newRow].level <= this.level)
-        break;
-    }
+  //find new row
+  for (newRow = row - 1; newRow >= 0; newRow--) {
+    if (this.master.tasks[newRow].level <= this.level)
+      break;
+  }
 
-    //is a parent or a brother
-    if (this.master.tasks[newRow].level == this.level) {
-      ret = true;
-      //compute descendant
-      var descNumber = 0;
-      for (var i = row + 1; i < this.master.tasks.length; i++) {
-        var desc = this.master.tasks[i];
-        if (desc.level > this.level) {
-          descNumber++;
-        } else {
-          break;
-        }
-      }
-      //move in memory
-      var blockToMove = this.master.tasks.splice(row, descNumber + 1);
-      var top = this.master.tasks.splice(0, newRow);
-      this.master.tasks = [].concat(top, blockToMove, this.master.tasks);
-      //move on dom
-      var rows = this.master.editor.element.find("tr[taskId]");
-      var domBlockToMove = rows.slice(row, row + descNumber + 1);
-      rows.eq(newRow).before(domBlockToMove);
+  //is a parent or a brother
+  if (this.master.tasks[newRow].level != this.level) {
+    this.master.setErrorOnTransaction(GanttMaster.messages["TASK_MOVE_INCONSISTENT_LEVEL"], this);
+    return false;    
+  }
 
-      //recompute depends string
-      this.master.updateDependsStrings();
+  //compute descendant
+  var descNumber = 0;
+  for (var i = row + 1; i < this.master.tasks.length; i++) {
+    var desc = this.master.tasks[i];
+    if (desc.level > this.level) {
+      descNumber++;
     } else {
-      this.master.setErrorOnTransaction(GanttMaster.messages["TASK_MOVE_INCONSISTENT_LEVEL"], this);
-      ret = false;
+      break;
     }
   }
-  return ret;
+
+  //move in memory
+  var blockToMove = this.master.tasks.splice(row, descNumber + 1);
+  var top = this.master.tasks.splice(0, newRow);
+  this.master.tasks = [].concat(top, blockToMove, this.master.tasks);
+
+  //move on dom
+  var rows = this.master.editor.element.find("tr[taskId]");
+  var domBlockToMove = rows.slice(row, row + descNumber + 1);
+  rows.eq(newRow).before(domBlockToMove);
+
+  //recompute depends string
+  this.master.updateDependsStrings();
+  
+  return true;
 };
 
 
 Task.prototype.moveDown = function() {
   //console.debug("moveDown", this);
-  var ret = false;
 
   //a row above must exist
   var row = this.getRow();
-  if (row < this.master.tasks.length - 1) {
+  if (row >= this.master.tasks.length - 1) {
+    return false;
+  }
 
-    //find nearest brother
-    var newRow;
-    for (newRow = row + 1; newRow < this.master.tasks.length; newRow++) {
-      if (this.master.tasks[newRow].level <= this.level)
-        break;
-    }
-
-    //is brother
-    if (this.master.tasks[newRow].level == this.level) {
-      ret = true;
-      //find last desc
-      for (newRow = newRow + 1; newRow < this.master.tasks.length; newRow++) {
-        if (this.master.tasks[newRow].level <= this.level)
-          break;
-      }
-
-      //compute descendant
-      var descNumber = 0;
-      for (var i = row + 1; i < this.master.tasks.length; i++) {
-        var desc = this.master.tasks[i];
-        if (desc.level > this.level) {
-          descNumber++;
-        } else {
-          break;
-        }
-      }
-
-      //move in memory
-      var blockToMove = this.master.tasks.splice(row, descNumber + 1);
-      var top = this.master.tasks.splice(0, newRow - descNumber - 1);
-      this.master.tasks = [].concat(top, blockToMove, this.master.tasks);
-
-
-      //move on dom
-      var rows = this.master.editor.element.find("tr[taskId]");
-      var aft = rows.eq(newRow - 1);
-      var domBlockToMove = rows.slice(row, row + descNumber + 1);
-      aft.after(domBlockToMove);
-
-      //recompute depends string
-      this.master.updateDependsStrings();
+  //find nearest brother
+  var newRow;
+  for (newRow = row + 1; newRow < this.master.tasks.length; newRow++) {
+    if (this.master.tasks[newRow].level <= this.level) {
+      break;
     }
   }
-  return ret;
+
+  //is brother
+  if (this.master.tasks[newRow].level != this.level) {
+    return false;
+  }
+
+  //find last desc
+  for (newRow = newRow + 1; newRow < this.master.tasks.length; newRow++) {
+    if (this.master.tasks[newRow].level <= this.level) {
+      break;
+    }
+  }
+
+  //compute descendant
+  var descNumber = 0;
+  for (var i = row + 1; i < this.master.tasks.length; i++) {
+    var desc = this.master.tasks[i];
+    if (desc.level > this.level) {
+      descNumber++;
+    } else {
+      break;
+    }
+  }
+
+  //move in memory
+  var blockToMove = this.master.tasks.splice(row, descNumber + 1);
+  var top = this.master.tasks.splice(0, newRow - descNumber - 1);
+  this.master.tasks = [].concat(top, blockToMove, this.master.tasks);
+
+
+  //move on dom
+  var rows = this.master.editor.element.find("tr[taskId]");
+  var aft = rows.eq(newRow - 1);
+  var domBlockToMove = rows.slice(row, row + descNumber + 1);
+  aft.after(domBlockToMove);
+
+  //recompute depends string
+  this.master.updateDependsStrings();
+  
+  return true;
 };
 
 
