@@ -161,6 +161,21 @@ Task.prototype.setPeriod = function (start, end) {
 
     //console.debug( " originalPeriod.duration "+ originalPeriod.duration +" deltaPeriod "+deltaPeriod+" "+"restricting "+restricting);
 
+
+    if (!restricting) {
+
+      //check global boundaries
+      if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
+        this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
+        return false;
+      }
+
+      //console.debug("set period: somethingChanged",this);
+      if (todoOk && !updateTree(this)) {
+        return false;
+      }
+    }
+
     if (restricting) {
       //loops children to get boundaries
       var children = this.getChildren();
@@ -188,19 +203,6 @@ Task.prototype.setPeriod = function (start, end) {
       this.duration = recomputeDuration(this.start, this.end);
     }
 
-    if (!restricting) {
-
-      //check global boundaries
-      if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
-        this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
-        return false;
-      }
-
-      //console.debug("set period: somethingChanged",this);
-      if (todoOk && !updateTree(this)) {
-        return false;
-      }
-    }
   }
 
   if (todoOk) {
