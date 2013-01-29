@@ -745,15 +745,19 @@ Task.prototype.indent = function() {
           desc.level++;
           //remove links from descendant to my parents
           this.master.links = this.master.links.filter(function(link) {
-            var linkToParent = false;
-            if (link.to == desc)
-              linkToParent = futureParents.indexOf(link.from) >= 0;
-            else if (link.from == desc)
-              linkToParent = futureParents.indexOf(link.to) >= 0;
-            return !linkToParent;
+            if (link.to == desc) {
+              return futureParents.indexOf(link.from) < 0;
+            }
+
+            if (link.from == desc) {
+              return futureParents.indexOf(link.to) < 0;
+            }
+
+            return true;
           });
-        } else
+        } else {
           break;
+        }
       }
       //recompute depends string
       this.master.updateDependsStrings();
@@ -780,8 +784,9 @@ Task.prototype.outdent = function() {
       var desc = this.master.tasks[i];
       if (desc.level > oldLevel || desc == this) {
         desc.level--;
-      } else
+      } else {
         break;
+      }
     }
 
     var task = this;
@@ -822,8 +827,9 @@ Task.prototype.moveUp = function() {
 
   //find new row
   for (newRow = row - 1; newRow >= 0; newRow--) {
-    if (this.master.tasks[newRow].level <= this.level)
+    if (this.master.tasks[newRow].level <= this.level) {
       break;
+    }
   }
 
   //is a parent or a brother
