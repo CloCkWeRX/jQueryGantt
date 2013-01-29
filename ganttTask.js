@@ -19,7 +19,11 @@
   LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/  
+*/
+
+/**
+ * @todo Avoid work in the constructor (computeStart, computeEndByDuration)
+ */
 function Task(id, name, code, level, start, duration) {
   this.id = id;
   this.name = name;
@@ -34,7 +38,7 @@ function Task(id, name, code, level, start, duration) {
   this.startIsMilestone = false;
   this.endIsMilestone = false;
 
-  this.collapsed=false;
+  this.collapsed = false;
   
 
   this.rowElement; //row editor html element
@@ -48,8 +52,9 @@ function Task(id, name, code, level, start, duration) {
 Task.prototype.clone = function () {
   var ret = {};
   for (var key in this) {
-    if (typeof(this[key])!="function")
+    if (typeof(this[key]) != "function") {
       ret[key] = this[key];
+    }
   }
   return ret;
 };
@@ -188,12 +193,12 @@ Task.prototype.setPeriod = function (start, end) {
         //check global boundaries
         if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
           this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
-          todoOk = false;
+          return false;
         }
 
         //console.debug("set period: somethingChanged",this);
         if (todoOk && !updateTree(this)) {
-          todoOk = false;
+          return false;
         }
       }
     }
@@ -201,16 +206,22 @@ Task.prototype.setPeriod = function (start, end) {
     if (todoOk) {
       //and now propagate to inferiors
       var infs = this.getInferiors();
-      if (infs && infs.length > 0) {
-        for (var i=0;i<infs.length;i++) {
-          var link = infs[i];
-          todoOk = link.to.moveTo(end, false); //this is not the right date but moveTo checks start
-          if (!todoOk)
-            break;
+      if (!(infs && infs.length > 0)) {
+        return true;
+      }
+
+      for (var i=0;i<infs.length;i++) {
+        var link = infs[i];
+        
+        //this is not the right date but moveTo checks start
+        if (!link.to.moveTo(end, false)) {
+          return false;
         }
       }
+
     }
   }
+
   return todoOk;
 };
 
