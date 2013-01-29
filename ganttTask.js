@@ -96,8 +96,6 @@ Task.prototype.setPeriod = function (start, end) {
     duration: this.duration
   };
 
-  var somethingChanged = false;
-
   //console.debug("setStart",date,date instanceof Date);
   var wantedStartMillis = start;
 
@@ -124,9 +122,11 @@ Task.prototype.setPeriod = function (start, end) {
     }
   }
 
+  var somethingChanged = false;
+
   //move date to closest day
   var date = new Date(start);
-
+  
   if (this.start != start || this.start != wantedStartMillis) {
     this.start = start;
     somethingChanged = true;
