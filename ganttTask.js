@@ -551,13 +551,13 @@ Task.prototype.changeStatus = function (newStatus) {
   return todoOk;
 };
 
-Task.prototype.synchronizeStatus=function (){
-  var oldS=this.status;
-  this.status="";
+Task.prototype.synchronizeStatus = function () {
+  var oldS = this.status;
+  this.status = "";
   return this.changeStatus(oldS);
 };
 
-Task.prototype.isLocallyBlockedByDependencies=function (){
+Task.prototype.isLocallyBlockedByDependencies = function () {
   var sups = this.getSuperiors();
 
   for (var i=0;i<sups.length;i++) {
