@@ -244,7 +244,7 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
   start = computeStart(start);
 
   //if start is milestone cannot be move
-  if (!ignoreMilestones && this.startIsMilestone && start!=this.start ) {
+  if (!ignoreMilestones && this.startIsMilestone && start != this.start) {
     //notify error
     this.master.setErrorOnTransaction(GanttMaster.messages["START_IS_MILESTONE"], this);
     return false;
@@ -350,7 +350,7 @@ function updateTree(task) {
 
     newStart = task.start;
   }
-  
+
   if (p.end < task.end) {
     if (p.endIsMilestone) {
       task.master.setErrorOnTransaction(GanttMaster.messages["END_IS_MILESTONE"] + "\n" + p.name, task);
@@ -422,13 +422,7 @@ Task.prototype.changeStatus = function (newStatus) {
             propagateStatus(chds[i], "STATUS_DONE", false,true,false);
 
           //set inferiors as active if outside the cone
-          var infs = task.getInferiors();
-          //set children as done
-          for (var i=0;i<infs.length;i++) {
-            if (cone.indexOf(infs[i].to) < 0)
-              //infs[i].to.changeStatus("STATUS_ACTIVE");
-              propagateStatus(infs[i].to, "STATUS_ACTIVE", false,false,false);
-          }
+          propagateToInferiors(cone, task.getInferiors(), "STATUS_ACTIVE");
         }
       } else {
         todoOk = false;
@@ -473,8 +467,9 @@ Task.prototype.changeStatus = function (newStatus) {
 
           //set inferiors as suspended
           var infs = task.getInferiors();
-          for (var i=0;i<infs.length;i++)
+          for (var i=0;i<infs.length;i++) {
             propagateStatus(infs[i].to, "STATUS_SUSPENDED", false,false,false);
+          }
         }
       } else {
         todoOk = false;
@@ -488,42 +483,30 @@ Task.prototype.changeStatus = function (newStatus) {
         //suspend parent if not active
         var par=task.getParent();
         if (par && par.status != "STATUS_ACTIVE") {
-          todoOk=propagateStatus(par,newStatus,false,false,true);
+          todoOk = propagateStatus(par,newStatus,false,false,true);
         }
 
 
         var chds = task.getChildren();
         //set children as active
-        for (var i=0;i<chds.length;i++){
-          if (chds[i].status != "STATUS_DONE")
+        for (var i=0;i<chds.length;i++) {
+          if (chds[i].status != "STATUS_DONE") {
             propagateStatus(chds[i], newStatus, false,true,false);
+          }
         }
 
         //set inferiors as STATUS_SUSPENDED or STATUS_UNDEFINED
-        var infs = task.getInferiors();
-        //set children as done
-        for (var i=0;i<infs.length;i++)
-          if (cone.indexOf(infs[i].to) < 0)
-            propagateStatus(infs[i].to, newStatus, false,false,false);
+        propagateToInferiors(cone, task.getInferiors(), newStatus);
       } else {
         todoOk = false;
       }
 
       // xxxx -> STATUS_FAILED children and dependent failed
     } else if (newStatus == "STATUS_FAILED") {
-      var chds = task.getChildren();
-      //set children as failed
-      for (var i=0;i<chds.length;i++)
-        propagateStatus(chds[i], "STATUS_FAILED", false,true,false);
-
-      //set inferiors as active
-      var infs = task.getInferiors();
-      //set children as done
-      for (var i=0;i<infs.length;i++)
-        if (cone.indexOf(infs[i].to) < 0)
-          propagateStatus(infs[i].to, "STATUS_FAILED", false,false,false);
+      propagateStatusFailed(task, cone);
     }
-    if (!todoOk){
+
+    if (!todoOk) {
       task.status = oldStatus;
       //console.debug("status rolled back: "+task.name + " to " + oldStatus);
     }
@@ -531,6 +514,24 @@ Task.prototype.changeStatus = function (newStatus) {
     return todoOk;
   }
 
+  function propagateStatusFailed(task, cone) {
+    var chds = task.getChildren();
+    //set children as failed
+    for (var i=0;i<chds.length;i++) {
+      propagateStatus(chds[i], "STATUS_FAILED", false, true, false);
+    }
+
+    propagateToInferiors(cone, task.getInferiors(), "STATUS_FAILED");
+  }
+
+  function propagateToInferiors(cone, infs, status) {
+    //set children as done
+    for (var i=0;i<infs.length;i++) {
+      if (cone.indexOf(infs[i].to) < 0) {
+        propagateStatus(infs[i].to, status, false, false, false);
+      }
+    }
+  }
 
   var todoOk = true;
   var oldStatus = this.status;
@@ -736,88 +737,93 @@ Task.prototype.indent = function () {
   var ret = false;
   //a row above must exist
   var row = this.getRow();
-  if (row > 0) {
-    var taskAbove = this.master.tasks[row - 1];
-    var newLev = this.level + 1;
-    if (newLev <= taskAbove.level + 1) {
-      ret = true;
-      //trick to get parents after indent
-      this.level++;
-      var futureParents = this.getParents();
-      this.level--;
-      var oldLevel = this.level;
-      for (var i = row; i < this.master.tasks.length; i++) {
-        var desc = this.master.tasks[i];
-        if (desc.level > oldLevel || desc == this) {
-          desc.level++;
-          //remove links from descendant to my parents
-          this.master.links = this.master.links.filter(function (link) {
-            if (link.to == desc) {
-              return futureParents.indexOf(link.from) < 0;
-            }
-
-            if (link.from == desc) {
-              return futureParents.indexOf(link.to) < 0;
-            }
-
-            return true;
-          });
-        } else {
-          break;
-        }
-      }
-      //recompute depends string
-      this.master.updateDependsStrings();
-      //enlarge parent using a fake set period
-      this.setPeriod(this.start + 1, this.end + 1);
-
-      //force status check
-      this.synchronizeStatus();
-    }
+  if (row <= 0) {
+    return false;
   }
-  return ret;
-};
 
-
-Task.prototype.outdent = function () {
-  //console.debug("outdent", this);
-  var ret = false;
-  //a level must be >1 -> cannot escape from root
-  var oldLevel = this.level;
-  if (this.level > 1) {
+  var taskAbove = this.master.tasks[row - 1];
+  var newLev = this.level + 1;
+  if (newLev <= taskAbove.level + 1) {
     ret = true;
-    var row = this.getRow();
+    //trick to get parents after indent
+    this.level++;
+    var futureParents = this.getParents();
+    this.level--;
+    var oldLevel = this.level;
     for (var i = row; i < this.master.tasks.length; i++) {
       var desc = this.master.tasks[i];
       if (desc.level > oldLevel || desc == this) {
-        desc.level--;
+        desc.level++;
+        //remove links from descendant to my parents
+        this.master.links = this.master.links.filter(function (link) {
+          if (link.to == desc) {
+            return futureParents.indexOf(link.from) < 0;
+          }
+
+          if (link.from == desc) {
+            return futureParents.indexOf(link.to) < 0;
+          }
+
+          return true;
+        });
       } else {
         break;
       }
     }
-
-    var task = this;
-    var chds = this.getChildren();
-    //remove links from me to my new children
-    this.master.links = this.master.links.filter(function (link) {
-      var linkExist = (link.to == task && chds.indexOf(link.from) >= 0 || link.from == task && chds.indexOf(link.to) >= 0);
-      return !linkExist;
-    });
-
-
-    //enlarge me if inherited children are larger
-    for (var i=0;i<chds.length;i++) {
-      //remove links from me to my new children
-      chds[i].setPeriod(chds[i].start + 1, chds[i].end + 1);
-    }
-
+    //recompute depends string
+    this.master.updateDependsStrings();
     //enlarge parent using a fake set period
     this.setPeriod(this.start + 1, this.end + 1);
 
     //force status check
     this.synchronizeStatus();
   }
+
+
   return ret;
+};
+
+
+Task.prototype.outdent = function () {
+  //console.debug("outdent", this);
+  //a level must be >1 -> cannot escape from root
+  var oldLevel = this.level;
+  if (this.level <= 1) {
+    return false;
+  }
+
+  var row = this.getRow();
+  for (var i = row; i < this.master.tasks.length; i++) {
+    var desc = this.master.tasks[i];
+    if (desc.level > oldLevel || desc == this) {
+      desc.level--;
+    } else {
+      break;
+    }
+  }
+
+  var task = this;
+  var chds = this.getChildren();
+  //remove links from me to my new children
+  this.master.links = this.master.links.filter(function (link) {
+    var linkExist = (link.to == task && chds.indexOf(link.from) >= 0 || link.from == task && chds.indexOf(link.to) >= 0);
+    return !linkExist;
+  });
+
+
+  //enlarge me if inherited children are larger
+  for (var i=0;i<chds.length;i++) {
+    //remove links from me to my new children
+    chds[i].setPeriod(chds[i].start + 1, chds[i].end + 1);
+  }
+
+  //enlarge parent using a fake set period
+  this.setPeriod(this.start + 1, this.end + 1);
+
+  //force status check
+  this.synchronizeStatus();
+
+  return false;
 };
 
 
@@ -961,7 +967,3 @@ function Role(id, name) {
   this.id = id;
   this.name = name;
 }
-
-
-
-
