@@ -171,7 +171,7 @@ Task.prototype.setPeriod = function (start, end) {
       }
 
       //console.debug("set period: somethingChanged",this);
-      if (todoOk && !updateTree(this)) {
+      if (!updateTree(this)) {
         return false;
       }
     }
