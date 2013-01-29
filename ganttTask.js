@@ -151,76 +151,76 @@ Task.prototype.setPeriod = function (start, end) {
 
     if (this.hasExternalDep) {
       this.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"] + "\n" + this.name, this);
-      todoOk = false;
+      return false;
+    }
+
+
+    //I'm restricting
+    var deltaPeriod = originalPeriod.duration - this.duration;
+    var restricting = deltaPeriod > 0;
+    var restrictingStart = restricting && (originalPeriod.start < this.start);
+    var restrictingEnd = restricting && (originalPeriod.end > this.end);
+
+    //console.debug( " originalPeriod.duration "+ originalPeriod.duration +" deltaPeriod "+deltaPeriod+" "+"restricting "+restricting);
+
+    if (restricting) {
+      //loops children to get boundaries
+      var children = this.getChildren();
+      var bs = Infinity;
+      var be = 0;
+      for (var i=0;i<children.length;i++) {
+
+        ch = children[i];
+        //console.debug("restricting: test child "+ch.name+" "+ch.end)
+        if (restrictingEnd) {
+          be = Math.max(be, ch.end);
+        } else {
+          bs = Math.min(bs, ch.start);
+        }
+      }
+
+      if (restrictingEnd) {
+        //console.debug("restricting end ",be, this.end);
+        this.end = Math.max(be, this.end);
+      } else {
+        //console.debug("restricting start");
+        this.start = Math.min(bs, this.start);
+      }
+
+       this.duration = recomputeDuration(this.start, this.end);
     } else {
 
-
-      //I'm restricting
-      var deltaPeriod = originalPeriod.duration - this.duration;
-      var restricting = deltaPeriod > 0;
-      var restrictingStart = restricting && (originalPeriod.start < this.start);
-      var restrictingEnd = restricting && (originalPeriod.end > this.end);
-
-      //console.debug( " originalPeriod.duration "+ originalPeriod.duration +" deltaPeriod "+deltaPeriod+" "+"restricting "+restricting);
-
-      if (restricting) {
-        //loops children to get boundaries
-        var children = this.getChildren();
-        var bs = Infinity;
-        var be = 0;
-        for (var i=0;i<children.length;i++) {
-
-          ch = children[i];
-          //console.debug("restricting: test child "+ch.name+" "+ch.end)
-          if (restrictingEnd) {
-            be = Math.max(be, ch.end);
-          } else {
-            bs = Math.min(bs, ch.start);
-          }
-        }
-
-        if (restrictingEnd) {
-          //console.debug("restricting end ",be, this.end);
-          this.end = Math.max(be, this.end);
-        } else {
-          //console.debug("restricting start");
-          this.start = Math.min(bs, this.start);
-        }
-
-         this.duration = recomputeDuration(this.start, this.end);
-      } else {
-
-        //check global boundaries
-        if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
-          this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
-          return false;
-        }
-
-        //console.debug("set period: somethingChanged",this);
-        if (todoOk && !updateTree(this)) {
-          return false;
-        }
-      }
-    }
-
-    if (todoOk) {
-      //and now propagate to inferiors
-      var infs = this.getInferiors();
-      if (!(infs && infs.length > 0)) {
-        return true;
+      //check global boundaries
+      if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
+        this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
+        return false;
       }
 
-      for (var i=0;i<infs.length;i++) {
-        var link = infs[i];
-        
-        //this is not the right date but moveTo checks start
-        if (!link.to.moveTo(end, false)) {
-          return false;
-        }
+      //console.debug("set period: somethingChanged",this);
+      if (todoOk && !updateTree(this)) {
+        return false;
       }
-
     }
   }
+
+  if (todoOk) {
+    //and now propagate to inferiors
+    var infs = this.getInferiors();
+    if (!(infs && infs.length > 0)) {
+      return true;
+    }
+
+    for (var i=0;i<infs.length;i++) {
+      var link = infs[i];
+      
+      //this is not the right date but moveTo checks start
+      if (!link.to.moveTo(end, false)) {
+        return false;
+      }
+    }
+
+  }
+
 
   return todoOk;
 };
