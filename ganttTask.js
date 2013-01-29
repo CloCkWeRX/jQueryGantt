@@ -45,7 +45,7 @@ function Task(id, name, code, level, start, duration) {
   this.assigs = [];
 }
 
-Task.prototype.clone = function() {
+Task.prototype.clone = function () {
   var ret = {};
   for (var key in this) {
     if (typeof(this[key])!="function")
@@ -54,7 +54,7 @@ Task.prototype.clone = function() {
   return ret;
 };
 
-Task.prototype.getAssigsString = function() {
+Task.prototype.getAssigsString = function () {
   var ret = "";
   for (var i=0;i<this.assigs.length;i++) {
     var ass = this.assigs[i];
@@ -66,7 +66,7 @@ Task.prototype.getAssigsString = function() {
   return ret;
 };
 
-Task.prototype.createAssignment = function(id, resourceId, roleId, effort) {
+Task.prototype.createAssignment = function (id, resourceId, roleId, effort) {
   var assig = new Assignment(id, resourceId, roleId, effort);
   this.assigs.push(assig);
   return assig;
@@ -74,7 +74,7 @@ Task.prototype.createAssignment = function(id, resourceId, roleId, effort) {
 
 
 //<%---------- SET PERIOD ---------------------- --%>
-Task.prototype.setPeriod = function(start, end) {
+Task.prototype.setPeriod = function (start, end) {
   //console.debug("setPeriod ",this.name,new Date(start),new Date(end));
   //var profilerSetPer = new Profiler("gt_setPeriodJS");
 
@@ -216,7 +216,7 @@ Task.prototype.setPeriod = function(start, end) {
 
 
 //<%---------- MOVE TO ---------------------- --%>
-Task.prototype.moveTo = function(start, ignoreMilestones) {
+Task.prototype.moveTo = function (start, ignoreMilestones) {
   //console.debug("moveTo ",this,start,ignoreMilestones);
   //var profiler = new Profiler("gt_task_moveTo");
 
@@ -371,7 +371,7 @@ function updateTree(task) {
 
 
 //<%---------- CHANGE STATUS ---------------------- --%>
-Task.prototype.changeStatus = function(newStatus) {
+Task.prototype.changeStatus = function (newStatus) {
   //console.debug("changeStatus: "+this.name+" from "+this.status+" -> "+newStatus);
   //compute descendant for identify a cone where status changes propagate
   var cone = this.getDescendant();
@@ -398,8 +398,9 @@ Task.prototype.changeStatus = function(newStatus) {
         for (var i=0;i<sups.length;i++) {
           if (cone.indexOf(sups[i].from) < 0) {
             if (sups[i].from.status != "STATUS_DONE") {
-              if (manuallyChanged || propagateFromParent)
+              if (manuallyChanged || propagateFromParent) {
                 task.master.setErrorOnTransaction(GanttMaster.messages["GANTT_ERROR_DEPENDS_ON_OPEN_TASK"] + "\n" + sups[i].from.name + " -> " + task.name);
+              }
               todoOk = false;
               break;
             }
@@ -537,13 +538,13 @@ Task.prototype.changeStatus = function(newStatus) {
   return todoOk;
 };
 
-Task.prototype.synchronizeStatus=function(){
+Task.prototype.synchronizeStatus=function (){
   var oldS=this.status;
   this.status="";
   return this.changeStatus(oldS);
 };
 
-Task.prototype.isLocallyBlockedByDependencies=function(){
+Task.prototype.isLocallyBlockedByDependencies=function (){
   var sups = this.getSuperiors();
 
   for (var i=0;i<sups.length;i++) {
@@ -556,7 +557,7 @@ Task.prototype.isLocallyBlockedByDependencies=function(){
 };
 
 //<%---------- TASK STRUCTURE ---------------------- --%>
-Task.prototype.getRow = function() {
+Task.prototype.getRow = function () {
   if (!this.master) {
     return -1;
   }
@@ -565,7 +566,7 @@ Task.prototype.getRow = function() {
 };
 
 
-Task.prototype.getParents = function() {
+Task.prototype.getParents = function () {
   var ret, par, topLevel, pos;
   if (!this.master) {
     return;
@@ -586,7 +587,7 @@ Task.prototype.getParents = function() {
 };
 
 
-Task.prototype.getParent = function() {
+Task.prototype.getParent = function () {
   var ret, par;
   if (!this.master) {
     return;  
@@ -604,7 +605,7 @@ Task.prototype.getParent = function() {
 };
 
 
-Task.prototype.isParent = function() {
+Task.prototype.isParent = function () {
   var ret = false, pos;
   if (!this.master) {
     return ret;
@@ -619,7 +620,7 @@ Task.prototype.isParent = function() {
 };
 
 
-Task.prototype.getChildren = function() {
+Task.prototype.getChildren = function () {
   var ret = [], pos, ch;
   if (!this.master) {
     return ret;
@@ -639,7 +640,7 @@ Task.prototype.getChildren = function() {
 };
 
 
-Task.prototype.getDescendant = function() {
+Task.prototype.getDescendant = function () {
   var ret = [], pos, ch;
   if (!this.master) {
     return ret;
@@ -659,13 +660,13 @@ Task.prototype.getDescendant = function() {
 };
 
 
-Task.prototype.getSuperiors = function() {
+Task.prototype.getSuperiors = function () {
   var ret = [], task = this;
   if (!this.master) {
     return ret;
   }
 
-  ret = this.master.links.filter(function(link) {
+  ret = this.master.links.filter(function (link) {
     return link.to == task;
   });
 
@@ -673,14 +674,14 @@ Task.prototype.getSuperiors = function() {
 };
 
 
-Task.prototype.getInferiors = function() {
+Task.prototype.getInferiors = function () {
   var ret = [], task = this;
 
   if (!this.master) {
     return ret;
   }
 
-  ret = this.master.links.filter(function(link) {
+  ret = this.master.links.filter(function (link) {
     return link.from == task;
   });
 
@@ -688,7 +689,7 @@ Task.prototype.getInferiors = function() {
 };
 
 
-Task.prototype.deleteTask = function() {
+Task.prototype.deleteTask = function () {
   //delete both dom elements
   this.rowElement.remove();
   this.ganttElement.remove();
@@ -713,18 +714,18 @@ Task.prototype.deleteTask = function() {
 
   //remove from links
   var task = this;
-  this.master.links = this.master.links.filter(function(link) {
+  this.master.links = this.master.links.filter(function (link) {
     return link.from != task && link.to != task;
   });
 };
 
 
-Task.prototype.isNew=function(){
+Task.prototype.isNew=function (){
   return (this.id+"").indexOf("tmp_")==0;
 };
 
 //<%------------------------------------------  INDENT/OUTDENT --------------------------------%>
-Task.prototype.indent = function() {
+Task.prototype.indent = function () {
   //console.debug("indent", this);
   var ret = false;
   //a row above must exist
@@ -744,7 +745,7 @@ Task.prototype.indent = function() {
         if (desc.level > oldLevel || desc == this) {
           desc.level++;
           //remove links from descendant to my parents
-          this.master.links = this.master.links.filter(function(link) {
+          this.master.links = this.master.links.filter(function (link) {
             if (link.to == desc) {
               return futureParents.indexOf(link.from) < 0;
             }
@@ -772,7 +773,7 @@ Task.prototype.indent = function() {
 };
 
 
-Task.prototype.outdent = function() {
+Task.prototype.outdent = function () {
   //console.debug("outdent", this);
   var ret = false;
   //a level must be >1 -> cannot escape from root
@@ -792,7 +793,7 @@ Task.prototype.outdent = function() {
     var task = this;
     var chds = this.getChildren();
     //remove links from me to my new children
-    this.master.links = this.master.links.filter(function(link) {
+    this.master.links = this.master.links.filter(function (link) {
       var linkExist = (link.to == task && chds.indexOf(link.from) >= 0 || link.from == task && chds.indexOf(link.to) >= 0);
       return !linkExist;
     });
@@ -815,7 +816,7 @@ Task.prototype.outdent = function() {
 
 
 //<%------------------------------------------  MOVE UP / MOVE DOWN --------------------------------%>
-Task.prototype.moveUp = function() {
+Task.prototype.moveUp = function () {
   //console.debug("moveUp", this);
   var row, newRow;
 
@@ -866,7 +867,7 @@ Task.prototype.moveUp = function() {
 };
 
 
-Task.prototype.moveDown = function() {
+Task.prototype.moveDown = function () {
   //console.debug("moveDown", this);
 
   //a row above must exist
