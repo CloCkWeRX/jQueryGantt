@@ -147,14 +147,12 @@ Task.prototype.setPeriod = function (start, end) {
   //profilerSetPer.stop();
 
   var todoOk = true;
+  if (somethingChanged && this.hasExternalDep) {
+    this.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"] + "\n" + this.name, this);
+    return false;
+  }
+
   if (somethingChanged) {
-
-    if (this.hasExternalDep) {
-      this.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"] + "\n" + this.name, this);
-      return false;
-    }
-
-
     //I'm restricting
     var deltaPeriod = originalPeriod.duration - this.duration;
     var restricting = deltaPeriod > 0;
