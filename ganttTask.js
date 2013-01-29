@@ -329,7 +329,6 @@ Task.prototype.moveTo = function (start, ignoreMilestones) {
 function updateTree(task) {
   //console.debug("updateTree ",task);
   var error;
-  var todoOk = true;
 
   //try to enlarge parent
   var p = task.getParent();
@@ -343,37 +342,37 @@ function updateTree(task) {
   if (p.start > task.start) {
     if (p.startIsMilestone) {
       task.master.setErrorOnTransaction(GanttMaster.messages["START_IS_MILESTONE"] + "\n" + p.name, task);
-      todoOk = false;
+      return false;
     } else if (p.depends) {
       task.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_CONSTRAINTS"] + "\n" + p.name, task);
-      todoOk = false;
-    } else {
-      newStart = task.start;
+      return false;
     }
+
+    newStart = task.start;
   }
+  
   if (p.end < task.end) {
-    if (!p.endIsMilestone) {
-      newEnd = task.end;
-    } else {
+    if (p.endIsMilestone) {
       task.master.setErrorOnTransaction(GanttMaster.messages["END_IS_MILESTONE"] + "\n" + p.name, task);
-      todoOk = false;
+      return false;
     }
+
+    newEnd = task.end;
   }
 
-  if (todoOk) {
-    //propagate updates if needed
-    if (newStart != p.start || newEnd != p.end) {
-      //has external deps ?
-      if (p.hasExternalDep) {
-        task.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"] + "\n" + p.name, task);
-        todoOk = false;
-      } else {
-        todoOk = p.setPeriod(newStart, newEnd);
-      }
+  //propagate updates if needed
+  if (newStart != p.start || newEnd != p.end) {
+    //has external deps ?
+    if (p.hasExternalDep) {
+      task.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"] + "\n" + p.name, task);
+      return false;
     }
+
+    return p.setPeriod(newStart, newEnd);
   }
 
-  return todoOk;
+
+  return true;
 }
 
 
