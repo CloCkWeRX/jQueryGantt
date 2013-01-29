@@ -146,7 +146,6 @@ Task.prototype.setPeriod = function (start, end) {
 
   //profilerSetPer.stop();
 
-  var todoOk = true;
   if (somethingChanged && this.hasExternalDep) {
     this.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"] + "\n" + this.name, this);
     return false;
@@ -205,26 +204,23 @@ Task.prototype.setPeriod = function (start, end) {
 
   }
 
-  if (todoOk) {
-    //and now propagate to inferiors
-    var infs = this.getInferiors();
-    if (!(infs && infs.length > 0)) {
-      return true;
-    }
 
-    for (var i=0;i<infs.length;i++) {
-      var link = infs[i];
-      
-      //this is not the right date but moveTo checks start
-      if (!link.to.moveTo(end, false)) {
-        return false;
-      }
-    }
-
+  //and now propagate to inferiors
+  var infs = this.getInferiors();
+  if (!(infs && infs.length > 0)) {
+    return true;
   }
 
+  for (var i=0;i<infs.length;i++) {
+    var link = infs[i];
+    
+    //this is not the right date but moveTo checks start
+    if (!link.to.moveTo(end, false)) {
+      return false;
+    }
+  }
 
-  return todoOk;
+  return true;
 };
 
 
