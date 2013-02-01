@@ -207,26 +207,30 @@ Task.prototype.setPeriod = function(start, end) {
 
 
 //<%---------- MOVE TO ---------------------- --%>
-Task.prototype.moveTo = function(start, ignoreMilestones) {
+Task.prototype.moveTo = function (start, ignoreMilestones) {
   //console.debug("moveTo ",this,start,ignoreMilestones);
   //var profiler = new Profiler("gt_task_moveTo");
 
-  if (start instanceof Date)
+  if (start instanceof Date) {
     start = start.getTime();
+  }
 
-  var originalPeriod = {start:this.start,end:this.end};
-  var somethingChanged = false;
+  var originalPeriod = {
+    start:this.start,
+    end:this.end
+  };
+
   var wantedStartMillis = start;
 
   //set a legal start
   start = computeStart(start);
 
   //if start is milestone cannot be move
-  if (!ignoreMilestones && this.startIsMilestone && start!=this.start ) {
+  if (!ignoreMilestones && this.startIsMilestone && start != this.start) {
     //notify error
     this.master.setErrorOnTransaction(GanttMaster.messages["START_IS_MILESTONE"], this);
     return false;
-  } else if (this.hasExternalDep){
+  } else if (this.hasExternalDep) {
     //notify error
     this.master.setErrorOnTransaction(GanttMaster.messages["TASK_HAS_EXTERNAL_DEPS"], this);
     return false;
@@ -255,53 +259,49 @@ Task.prototype.moveTo = function(start, ignoreMilestones) {
     }
     this.start = start;
     this.end = end;
-    somethingChanged = true;
-  }
-
-  //profiler.stop();
-
-  var todoOk = true;
-
-  if (somethingChanged) {
+    //profiler.stop();
 
     //check global boundaries
     if (this.start < this.master.minEditableDate || this.end > this.master.maxEditableDate) {
       this.master.setErrorOnTransaction(GanttMaster.messages["CHANGE_OUT_OF_SCOPE"], this);
-      todoOk = false;
+      return false;
     }
 
-    if (todoOk) {
-      var panDelta = originalPeriod.start - this.start;
-      //console.debug("panDelta",panDelta);
-      //loops children to shift them
-      var children = this.getChildren();
-      for (var i=0;i<children.length;i++) {
-        ch = children[i];
-        todoOk = ch.moveTo(ch.start - panDelta, false);
-        if (!todoOk)
-          break;
+    
+    var panDelta = originalPeriod.start - this.start;
+    //console.debug("panDelta",panDelta);
+    //loops children to shift them
+    var children = this.getChildren();
+    for (var i=0;i<children.length;i++) {
+      ch = children[i];
+      if (!ch.moveTo(ch.start - panDelta, false)) {
+        return false;
       }
     }
+  
 
     //console.debug("set period: somethingChanged",this);
-    if (todoOk && !updateTree(this)) {
-      todoOk = false;
+    if (!updateTree(this)) {
+      return false;
     }
 
-    if (todoOk) {
-      //and now propagate to inferiors
-      var infs = this.getInferiors();
-      if (infs && infs.length > 0) {
-        for (var i=0;i<infs.length;i++) {
-          var link = infs[i];
-          todoOk = link.to.moveTo(end, false); //this is not the right date but moveTo checks start
-          if (!todoOk)
-            break;
+
+    //and now propagate to inferiors
+    var infs = this.getInferiors();
+    if (infs && infs.length > 0) {
+      for (var i=0;i<infs.length;i++) {
+        var link = infs[i];
+
+        //this is not the right date but moveTo checks start
+        if (!link.to.moveTo(end, false)) {
+          return false;
         }
       }
     }
+
   }
-  return todoOk;
+
+  return true;
 };
 
 
@@ -525,16 +525,16 @@ Task.prototype.synchronizeStatus=function(){
   return this.changeStatus(oldS);
 };
 
-Task.prototype.isLocallyBlockedByDependencies=function(){
+Task.prototype.isLocallyBlockedByDependencies = function () {
   var sups = this.getSuperiors();
-  var blocked=false;
+
   for (var i=0;i<sups.length;i++) {
     if (sups[i].from.status != "STATUS_DONE") {
-      blocked=true;
-      break;
+      return true;
     }
   }
-  return blocked;
+
+  return false;
 };
 
 //<%---------- TASK STRUCTURE ---------------------- --%>
