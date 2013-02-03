@@ -86,6 +86,7 @@ Task.prototype.setPeriod = function (start, end) {
   if (start instanceof Date) {
     start = start.getTime();
   }
+
   if (end instanceof Date) {
     end = end.getTime();
   }
@@ -367,7 +368,6 @@ function updateTree(task) {
 
     return p.setPeriod(newStart, newEnd);
   }
-
 
   return true;
 }

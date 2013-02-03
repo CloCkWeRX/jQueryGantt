@@ -595,12 +595,12 @@ GanttMaster.prototype.beginTransaction = function() {
 
 
 GanttMaster.prototype.endTransaction = function() {
-  var ret = true;
   if (!this.__currentTransaction) {
     console.error("Transaction never started.");
-
     return true;
   }
+
+  var ret = true;
 
   //no error -> commit
   if (this.__currentTransaction.errors.length <= 0) {
