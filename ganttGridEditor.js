@@ -29,6 +29,8 @@ function GridEditor(master) {
 
 
 GridEditor.prototype.fillEmptyLines = function() {
+  var factory = new TaskFactory();
+
   //console.debug("GridEditor.fillEmptyLines");
   var rowsToAdd = 30 - this.element.find(".taskEditRow").size();
   if (rowsToAdd <= 0) {
@@ -53,7 +55,7 @@ GridEditor.prototype.fillEmptyLines = function() {
 
       //fill all empty previouses
       emptyRow.prevAll(".emptyRow").andSelf().each(function() {
-        var ch = new Task("tmp_fk" + new Date().getTime(), "", "", level, start, 1);
+        var ch = factory.build("tmp_fk" + new Date().getTime(), "", "", level, start, 1);
         var task = master.addTask(ch);
         lastTask = ch;
       });
